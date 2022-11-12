@@ -2,6 +2,8 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 from dash import Dash, html, dcc, Input, Output, dash_table, ctx
 import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 
 DATA_TABLE_COLUMNS = [
     {
@@ -44,13 +46,13 @@ new_task_line = {
 df_new_task_line = pd.DataFrame(new_task_line, index=[0])
 
 
-def get_default_table():
+def get_default_table() -> pd.DataFrame:
     return pd.read_csv(
         "https://raw.githubusercontent.com/plotly/datasets/master/GanttChart.csv"
     )
 
 
-def add_finish_column(timeline_df: pd.DataFrame):
+def add_finish_column(timeline_df: pd.DataFrame) -> pd.DataFrame:
     """
     This function is creates 'Finish' column which is a required column for timeline chart.
     """
@@ -94,33 +96,13 @@ app.layout = dbc.Container(
             style_header=DATA_TABLE_STYLE.get("style_header"),
         ),
         dcc.Graph(id="gantt-graph"),
+        dcc.Graph(id="pie-graph"),
     ],
     fluid=True,
 )
 
 
-def create_gantt_chart(updated_table_as_df):
-    gantt_fig = px.timeline(updated_table_as_df, x_start="Start", x_end="Finish", y="Task", color="Resource",
-                            title='Project Plan Gantt Chart')
-
-    gantt_fig.update_layout(
-        title_x=0.5,
-        font=dict(size=16),
-        yaxis=dict(title="Task", automargin=True, autorange="reversed", categoryorder="array",
-                   categoryarray=updated_table_as_df["Task"]),  # sorting gantt according to datatable
-        xaxis=dict(title=""))
-    gantt_fig.update_traces(width=0.7)
-
-    return gantt_fig
-
-
-@app.callback(
-    Output("user-datatable", "data"),
-    Output("gantt-graph", "figure"),
-    Input("user-datatable", "derived_virtual_data"),
-    Input("add-row-btn", "n_clicks"),
-)
-def update_table_and_figure(user_datatable: None or list, _):
+def update_datatable(user_datatable):
     # if user deleted all rows, return the default table:
     if not user_datatable:
         updated_table = df_new_task_line
@@ -131,11 +113,59 @@ def update_table_and_figure(user_datatable: None or list, _):
 
     else:
         updated_table = pd.DataFrame(user_datatable)
+    return add_finish_column(updated_table)
 
-    updated_table_as_df = add_finish_column(updated_table)
+
+def create_gantt_chart(updated_table_as_df) -> px:
+    gantt_fig = px.timeline(updated_table_as_df, x_start="Start", x_end="Finish", y="Task", color="Resource",
+                            title='Project Plan Gantt Chart')
+
+    gantt_fig.update_layout(
+        title_x=0.5,
+        font=dict(size=16),
+        yaxis=dict(title="Task", automargin=True, autorange="reversed", categoryorder="array",
+                   categoryarray=updated_table_as_df["Task"]),  # sorting gantt according to datatable
+        xaxis=dict(title=""))
+    gantt_fig.update_traces(width=0.7)
+    return gantt_fig
+
+
+def create_kpi_charts(updated_table_as_df) -> px:
+    df_for_kpi = updated_table_as_df[['Resource', 'Duration']].groupby(['Resource']).agg(
+        nunique=('Resource', 'count'), sum=('Duration', 'sum'),
+    ).reset_index()  # Using pandas methods on the datatable to create KPI's
+    kpi_charts = make_subplots(1, 2, specs=[[{'type': 'domain'}, {'type': 'domain'}]],
+                               subplot_titles=['Number of tasks that use the Resource',  # @TODO change names of titles
+                                               'Number of tasks that use the Resource'])
+    kpi_charts.add_trace(go.Pie(labels=df_for_kpi['Resource'].tolist(), values=df_for_kpi['sum'].tolist(), ), 1, 1)
+    kpi_charts.add_trace(
+        go.Pie(labels=df_for_kpi['Resource'].tolist(), values=df_for_kpi['nunique'].tolist()), 1,
+        2)
+    kpi_charts.update_traces(marker=dict(colors=px.colors.qualitative.Alphabet))
+    kpi_charts.update_layout(
+        paper_bgcolor="#DDE6EF",
+        font=dict(
+            size=20,
+            color="#104870"),
+    )
+    return kpi_charts
+
+
+@app.callback(
+    Output("user-datatable", "data"),
+    Output("gantt-graph", "figure"),
+    Output("pie-graph", "figure"),
+    Input("user-datatable", "derived_virtual_data"),
+    Input("add-row-btn", "n_clicks"),
+)
+def update_table_and_figure(user_datatable: None or list, _) -> (list, dict):
+    """
+    This callback function returns the timeline chart and the updated datatable for the main app layout
+    """
+    updated_table_as_df = update_datatable(user_datatable)
     gantt_chart = create_gantt_chart(updated_table_as_df)
-
-    return updated_table_as_df.to_dict("records"), gantt_chart
+    kpi_charts = create_kpi_charts(updated_table_as_df)
+    return updated_table_as_df.to_dict("records"), gantt_chart, kpi_charts
 
 
 if __name__ == "__main__":
