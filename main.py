@@ -82,13 +82,14 @@ def update_datatable(user_datatable):
 def create_gantt_chart(updated_table_as_df) -> px:
     gantt_fig = px.timeline(updated_table_as_df, x_start="Start", x_end="Finish", y="Task", color="Resource",
                             title='Project Plan Gantt Chart')
-
+    # https://stackoverflow.com/questions/63559119/how-to-specify-color-for-elements-in-plotly-gannt-chart
     gantt_fig.update_layout(
         title_x=0.5,
         font=dict(size=16),
         yaxis=dict(title="Task", automargin=True, autorange="reversed", categoryorder="array",
                    categoryarray=updated_table_as_df["Task"]),  # sorting gantt according to datatable
         xaxis=dict(title=""))
+
     gantt_fig.update_traces(width=0.7)
     return gantt_fig
 
@@ -106,6 +107,7 @@ def create_kpi_charts(updated_table_as_df) -> px:
         2)
     kpi_charts.update_traces(marker=dict(colors=px.colors.qualitative.Alphabet))
     kpi_charts.update_layout(
+
         # paper_bgcolor="#DDE6EF",
         font=dict(
             size=20,
