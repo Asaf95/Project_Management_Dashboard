@@ -6,7 +6,7 @@ from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 import const
 
-Resource_Color_values = px.colors.qualitative.Alphabet  # @TODO: ADD MORE COLORS TO THE CHARTS
+Resource_Color_values = px.colors.qualitative.Alphabet  # @TODO: ADD MORE COLORS TO THE CHARTS and make them all use the same for each resource
 
 
 def __get_default_table() -> pd.DataFrame:
@@ -105,7 +105,7 @@ def create_kpi_charts(updated_table_as_df) -> px:
     kpi_charts.add_trace(
         go.Pie(labels=df_for_kpi['Resource'].tolist(), values=df_for_kpi['nunique'].tolist()), 1,
         2)
-    kpi_charts.update_traces(marker=dict(colors=px.colors.qualitative.Alphabet))
+    # kpi_charts.update_traces(marker=dict(colors=px.colors.qualitative.Alphabet))
     kpi_charts.update_layout(
 
         # paper_bgcolor="#DDE6EF",
