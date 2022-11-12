@@ -4,49 +4,12 @@ from dash import Dash, html, dcc, Input, Output, dash_table, ctx
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import const
 
-DATA_TABLE_COLUMNS = [
-    {
-        "id": "Task",
-        "name": "Task",
-    },
-    {
-        "id": "Duration",
-        "name": "Days",
-        "type": "numeric",
-    },
-    {"id": "Resource", "name": "Resource", "presentation": "dropdown"},
-    {"id": "Start", "name": "Start", "type": "datetime"},
-    {"id": "Finish", "name": "End", "type": "datetime", "editable": False},
-]
-
-DATA_TABLE_STYLE = {
-    "style_data_conditional": [
-        {"if": {"column_id": "Finish"}, "backgroundColor": "#eee"}
-    ],
-    "style_header": {
-        "color": "white",
-        "backgroundColor": "#799DBF",
-        "fontWeight": "bold",
-    },
-    "css": [
-        {"selector": ".Select-value", "rule": "padding-right: 22px"},  # makes space for the dropdown caret
-        {"selector": ".dropdown", "rule": "position: static"}  # makes dropdown visible
-    ]
-}
-
-# Default new row for datatable
-new_task_line = {
-    "Task": "",
-    "Start": "2016-01-01",
-    "Duration": 0,
-    "Resource": "A",
-    "Finish": "2016-01-01",
-}
-df_new_task_line = pd.DataFrame(new_task_line, index=[0])
+Resource_Color_values = px.colors.qualitative.Alphabet  # @TODO: ADD MORE COLORS TO THE CHARTS
 
 
-def get_default_table() -> pd.DataFrame:
+def __get_default_table() -> pd.DataFrame:
     return pd.read_csv(
         "https://raw.githubusercontent.com/plotly/datasets/master/GanttChart.csv"
     )
@@ -78,8 +41,8 @@ app.layout = dbc.Container(
         dash_table.DataTable(
             id="user-datatable",
             sort_action="native",
-            columns=DATA_TABLE_COLUMNS,
-            data=get_default_table().to_dict("records"),
+            columns=const.DATA_TABLE_COLUMNS,
+            data=__get_default_table().to_dict("records"),
             editable=True,
             dropdown={
                 "Resource": {
@@ -89,11 +52,11 @@ app.layout = dbc.Container(
                     ],
                 },
             },
-            css=DATA_TABLE_STYLE.get("css"),
+            css=const.DATA_TABLE_STYLE.get("css"),
             page_size=10,
             row_deletable=True,
-            style_data_conditional=DATA_TABLE_STYLE.get("style_data_conditional"),
-            style_header=DATA_TABLE_STYLE.get("style_header"),
+            style_data_conditional=const.DATA_TABLE_STYLE.get("style_data_conditional"),
+            style_header=const.DATA_TABLE_STYLE.get("style_header"),
         ),
         dcc.Graph(id="gantt-graph"),
         dcc.Graph(id="pie-graph"),
@@ -105,11 +68,11 @@ app.layout = dbc.Container(
 def update_datatable(user_datatable):
     # if user deleted all rows, return the default table:
     if not user_datatable:
-        updated_table = df_new_task_line
+        updated_table = const.df_new_task_line
 
     # if button clicked, then add a row
     elif ctx.triggered_id == "add-row-btn":
-        updated_table = pd.concat([pd.DataFrame(user_datatable), df_new_task_line])
+        updated_table = pd.concat([pd.DataFrame(user_datatable), const.df_new_task_line])
 
     else:
         updated_table = pd.DataFrame(user_datatable)
@@ -143,7 +106,7 @@ def create_kpi_charts(updated_table_as_df) -> px:
         2)
     kpi_charts.update_traces(marker=dict(colors=px.colors.qualitative.Alphabet))
     kpi_charts.update_layout(
-        paper_bgcolor="#DDE6EF",
+        # paper_bgcolor="#DDE6EF",
         font=dict(
             size=20,
             color="#104870"),
